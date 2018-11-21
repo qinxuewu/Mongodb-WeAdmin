@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>Mongodb WeAdmin v1.0</title>
+		<meta name="renderer" content="webkit">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+		<link rel="stylesheet" href="../../static/css/font.css">
+		<link rel="stylesheet" href="../../static/css/weadmin.css">
+		<link href="https://cdn.bootcss.com/jsoneditor/5.13.1/jsoneditor.min.css" rel="stylesheet">
+		<!-- 让IE8/9支持媒体查询，从而兼容栅格 -->
+		<!--[if lt IE 9]>
+		      <script src="https://cdn.staticfile.org/html5shiv/r29/html5.min.js"></script>
+		      <script src="https://cdn.staticfile.org/respond.js/1.4.2/respond.min.js"></script>
+		    <![endif]-->
+	</head>
+
+	<body>
+		<div class="weadmin-body">
+			<div id="codeEditor" style="width: 100%; height: 350px;"></div>
+			  <button class="layui-btn" lay-filter="update" onclick="update(this)">保存</button>	
+		</div>
+		<script src="../../lib/layui/layui.js" charset="utf-8"></script>
+		<script src="https://cdn.bootcss.com/jsoneditor/5.13.1/jsoneditor.min.js"></script>
+		<script src="https://cdn.bootcss.com/ace/1.2.9/ace.js"></script>
+		<script src="https://cdn.bootcss.com/jsonlint/1.6.0/jsonlint.min.js"></script>
+		<script type="text/javascript">
+			layui.extend({
+				admin: '{/}../../static/js/admin'
+			});
+			layui.use([ 'jquery', 'admin','layer'], function() {
+				var $ = layui.jquery,admin = layui.admin,layer = layui.layer;
+				var codeEditor = document.getElementById("codeEditor");
+				//初始化编辑器模式
+				var codeOptions = {
+					mode: 'code',
+					modes: ['code'],
+					onError: function(err) {
+						alert(err.toString());
+					}
+				};
+				var objURl=urlToJSON();
+				var tableName=objURl.tableName;
+				var dbName=objURl.dbName;
+				var id=objURl.id;
+				//初始化编辑器内容
+				var codeEditor = new JSONEditor(codeEditor, codeOptions, {});
+				
+				$(function(){
+					console.log(id);
+					 $.ajax({
+				            url: baseURl+"/mongo/findOne",
+				            dataType: "json",
+				            type: "post",
+				            async: false,
+				            data: {"tableName":tableName,"dbName":dbName,"id":id},
+				            success: function (data) {
+				                if (data.code == 0) {			
+				                	console.log(data);
+				                	codeEditor.set(data.data);
+				                }else{
+				                	layer.alert(data.msg);
+				                }
+				            },
+				        });
+				})
+				
+				
+				
+				
+				window.update = function (argument) {
+						var codeContent = codeEditor.getText();
+						if(codeContent == ""){
+							layer.alert("请输入JSON数据");
+						}else{
+							var jsonobj=JSON.parse(codeContent);
+							 if(typeof jsonobj == 'object' && jsonobj ){
+								// 获得frame索引
+								var index = parent.layer.getFrameIndex(window.name);
+								  $.ajax({
+							            url: baseURl+"/mongo/updateCollection",
+							            dataType: "json",
+							            type: "post",
+							            data: {"tableName":tableName,"dbName":dbName,"parame":codeContent},
+							            success: function (data) {
+							                if (data.code == 0) {				              	
+							                	layer.msg('更新成功', {icon: 1, time: 1500}, function(){
+							                			//关闭当前frame
+														parent.layer.close(index);
+							                		}); 
+							                }else{
+							                	layer.alert(data.msg);
+							                }
+							            },
+							        });
+				    		
+							 }else{
+								 layer.alert("json格式错误");
+					             return false;
+							 }
+						}
+			    	 }
+			});
+		</script>
+	</body>
+
+</html>

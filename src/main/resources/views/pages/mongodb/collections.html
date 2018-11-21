@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="UTF-8">
+		<title>mongodb web版查询功能</title>
+		<meta name="renderer" content="webkit">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+		<link rel="stylesheet" href="../../static/css/font.css">
+		<link rel="stylesheet" href="../../static/css/weadmin.css">
+		<link href="https://cdn.bootcss.com/jsoneditor/5.13.1/jsoneditor.min.css" rel="stylesheet">
+		<!-- 让IE8/9支持媒体查询，从而兼容栅格 -->
+		<!--[if lt IE 9]>
+	      <script src="https://cdn.staticfile.org/html5shiv/r29/html5.min.js"></script>
+	      <script src="https://cdn.staticfile.org/respond.js/1.4.2/respond.min.js"></script>
+	    <![endif]-->
+	    <style>
+			    pre { padding: 5px; margin: 5px; }
+			    .string { color: green; }
+			    .number { color: darkorange; }
+			    .boolean { color: blue; }
+			    .null { color: magenta; }
+			    .key { color: red;font-size: 14px; }
+			    .collection{width: 800px;border: 1px solid #ccc;display: block;border-radius:5px;margin-top: 20px;}
+		</style>
+	</head>
+
+	<body>
+		<div class="weadmin-body">		
+			<div class="weadmin-block">
+				<button class="layui-btn" onclick="add()"><i class="layui-icon"></i>添加</button>
+				<button class="layui-btn" onclick="exportJson()"><i class="layui-icon">&#xe641;</i>导出JSON文件</button>
+				<button class="layui-btn" lay-submit="" lay-filter="sreach" onclick="sreach()"><i class="layui-icon">&#xe615;</i>查询</button>
+				<span class="fr" style="line-height:40px" id="totalCount"></span>
+				<a class="layui-btn layui-btn-sm" style="line-height:1.6em;margin-top:3px;float:right" href="javascript:location.replace(location.href);" title="刷新">
+				<i class="layui-icon layui-icon-refresh" style="font-size: 30px;line-height: 30px;"></i>  
+			</a>
+			</div>
+	
+			<div id="codeEditor" style="width: 100%; height: 150px;"></div>
+		
+			</div>
+			<table class="layui-table"  id="collectionsList">
+				<thead>
+					<tr>
+						<th>文档内容</th>
+						<th>操作</th>
+				</thead>
+				<tbody id="list">
+					
+				</tbody>
+			</table>
+			<div id="page" style="margin-left: 20px;">
+				
+			</div>
+		</div>
+		
+		<!-- 弹出层 -->
+		<div style="display: none;" class="popUp">
+				<textarea  id="textar" style="height: 470px;width: 776px;font-size: 14px;font-weight: bold;"></textarea>
+		</div>
+		<script src="../../lib/layui/layui.js" charset="utf-8"></script>
+		<script src="https://cdn.bootcss.com/jsoneditor/5.13.1/jsoneditor.min.js"></script>
+		<script src="https://cdn.bootcss.com/ace/1.2.9/ace.js"></script>
+		<script src="https://cdn.bootcss.com/jsonlint/1.6.0/jsonlint.min.js"></script>
+		<script type="text/javascript">
+			layui.extend({
+				admin: '{/}../../static/js/admin'
+			});
+			layui.use(['form', 'jquery', 'admin','layer','laypage'], function() {
+				var objURl=urlToJSON();
+				var tableName=objURl.tableName;
+				var dbName=objURl.dbName;
+				var count = 0;
+				var parame="";
+				var $ = layui.jquery,admin = layui.admin,layer = layui.layer;laypage = layui.laypage; 
+				
+				var codeEditor = document.getElementById("codeEditor");
+				//初始化编辑器模式
+				var codeOptions = {
+					mode: 'code',
+					modes: ['code'],
+					onError: function(err) {
+						alert(err.toString());
+					}
+				};
+				//初始化编辑器内容
+				var codeEditor = new JSONEditor(codeEditor, codeOptions, {});
+				
+				  //页面初始化加载
+				    initPage(1);
+				    //分页
+			        laypage.render({
+			            elem: 'page'
+			            , count: count //数据总数，从服务端得到
+			            ,layout: ['count', 'prev', 'page', 'next', 'limit', 'refresh', 'skip']
+			            , jump: function (obj, first) {
+			                //首次不执行
+			                if (!first) {
+			                    console.log("首次不执行");
+			                    initPage(obj.curr);
+			                }
+			            }
+			        });
+					function initPage(p){
+						 var index = layer.load();
+						  $.ajax({
+					            url: baseURl+"/mongo/getCollection",
+					            dataType: "json",
+					            type: "post",
+					            async: false,
+					            data: {"tableName":tableName,"dbName":dbName,"p": p,"parame":parame},
+					            success: function (data) {
+					            	layer.close(index);
+					            	 $("#list").html("");
+					                if (data.code == 0) {				              	
+					                	 count = data.data.totalCount;
+					                	 $("#totalCount").html('共有数据："'+count+'" 条');
+					                	  $.each(data.data.data, function (index, obj) {
+					                		  var doc=syntaxHighlight(obj);
+					                          var html ='<tr><td><pre class="result">'+doc+'</pre></td>';
+					                          	  html +='<td class="td-manage" style="width:14%">';
+					                          	  html +='<button class="layui-btn" onclick="endit(this)" data-id="'+obj._id+'"> <i class="layui-icon">&#xe642;</i>编辑</button>';
+					                          	  html +='<button class="layui-btn layui-btn-danger" onclick="del(this)" data-id="'+obj._id+'"><i class="layui-icon"></i>删除</button></td>';
+					                              $("#list").append(html);
+					                      });				    
+					                }else{
+					                	layer.alert("未知异常");
+					                }
+					            },
+					        });
+					}
+	
+					/*删除*/
+					window.del = function (obj) {
+					    	var id=$(obj).attr('data-id');
+			            	layer.confirm('确认要删除吗？', function(index) {
+								  $.ajax({
+							            url: baseURl+"/mongo/deleteCollection",
+							            dataType: "json",
+							            type: "post",
+							            data: {"tableName":tableName,"dbName":dbName,"id":id},
+							            success: function (data) {
+							                if (data.code == 0) {				              	
+							                	layer.msg('已删除!', {icon: 1,time: 1000});	  
+							                	//页面初始化加载
+											     initPage(1);
+							                }else{
+							                	layer.alert(data.msg);
+							                }
+							            },
+							        });
+							});
+					}
+
+					
+					//修改
+					window.endit = function (obj){
+						var id=$(obj).attr('data-id');
+						WeAdminEdit('编辑集合数据'+tableName,'./edit.html?tableName='+tableName+'&dbName='+dbName+'&id='+id,'',863,470);
+			         
+					}
+					
+					//新增
+					window.add = function (argument){
+					    WeAdminEdit('添加集合数据'+tableName,'./add.html?tableName='+tableName+'&dbName='+dbName,'',863,470);
+					}
+			
+					//条件查询
+					window.sreach = function (argument){
+						var codeContent = codeEditor.getText();
+						if(codeContent == ""){
+							 parame=codeContent;
+							 initPage(1);	
+						}else{
+							var jsonobj=JSON.parse(codeContent);
+							 if(typeof jsonobj == 'object' && jsonobj ){
+								 parame=codeContent;
+								 initPage(1);	
+								    //初始化分页
+							        laypage.render({
+							            elem: 'page'
+							            , count: count //数据总数，从服务端得到
+							            ,layout: ['count', 'prev', 'page', 'next', 'limit', 'refresh', 'skip']
+							            , jump: function (obj, first) {
+							                //首次不执行
+							                if (!first) {
+							                    console.log("首次不执行");
+							                    initPage(obj.curr);
+							                }
+							            }
+							        });
+							 }else{
+								 layer.alert("json格式错误");
+					             return false;
+							 }
+					  }
+				  }
+
+					//导出
+					window.exportJson = function (argument){
+						window.open(baseURl + '/mongo/exportList?tableName='+tableName+'&dbName='+dbName+'&parame='+parame);
+					}
+					
+			});
+		</script>
+	</body>
+
+</html>
