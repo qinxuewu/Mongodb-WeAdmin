@@ -5,7 +5,7 @@
 - 源于线上环境部署mongodb时屏蔽了外网访问mongodb,所以使用不了mongochef这样方便的远程连接工具，所以Mongodb提供的java api实现的的网页版实现
 - 未设置登录权限相关模块，低耦合性 方便复制代码嵌入到现有的项目中
 
-
+https://gitee.com/qinxuewu/mongo-web-select  码云更新地址
 #### 软件架构
 1. springBoot2.0相关组件
 1. mongodb
