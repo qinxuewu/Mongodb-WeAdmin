@@ -1,54 +1,61 @@
 package com.qxw.mongodb;
-import static com.mongodb.client.model.Aggregates.*;
-import static com.mongodb.client.model.Filters.*;
-import static com.mongodb.client.model.Updates.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
-import org.bson.Document;
-import org.bson.conversions.Bson;
-import org.bson.types.ObjectId;
+
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializeFilter;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.alibaba.fastjson.serializer.ValueFilter;
+import com.mongodb.BasicDBObject;
+import com.mongodb.DB;
 import com.mongodb.DBObject;
+import com.mongodb.MongoClient;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.model.FindOneAndUpdateOptions;
-import com.mongodb.client.model.ReturnDocument;
 import com.mongodb.client.result.DeleteResult;
+import org.bson.Document;
+import org.bson.conversions.Bson;
+import org.bson.types.ObjectId;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import static com.mongodb.client.model.Aggregates.*;
+import static com.mongodb.client.model.Filters.eq;
 
 /**
  * 	mongodb工具类
  * @author qinxuewu
  *
  */
+@Component
 public class MongoSdkBase {
+    @Autowired
+    private MongoClient mongoClient;
     /**
      * 表连接
      */
-    public static MongoCollection<Document> getColl(String tableName) {
-        MongoDatabase db = MongoFactory.getMongoDb("testdb");
+    public  MongoCollection<Document> getColl(String tableName) {
+        MongoDatabase db = mongoClient.getDatabase("actuator");
         return db.getCollection(tableName);
     }
-    public static MongoCollection<Document> getColl(String dbName,String tableName) {
-        MongoDatabase db = MongoFactory.getMongoDb(dbName);
+    public  MongoCollection<Document> getColl(String dbName, String tableName) {
+        MongoDatabase db = mongoClient.getDatabase(dbName);
         return db.getCollection(tableName);
     }
 
     /***
      * 插入单条记录
      * @param table  表连接
-     * @param obj Document
+     * @param doc Document
      * @return
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static String insertOneDocument(MongoCollection table, Document doc) {
+    public  String insertOneDocument(MongoCollection table, Document doc) {
         if (doc == null){ return null;}
         doc.remove("_id");
         doc.put("_id", new ObjectId().toString());
@@ -63,8 +70,8 @@ public class MongoSdkBase {
      * obj double 处理不规范
      * @return
      */
-    @SuppressWarnings({ "rawtypes", "unchecked"})
-	public static String insertOne(MongoCollection table, Object obj) {
+
+    public  String insertOne(MongoCollection table, Object obj) {
         if (obj == null) {return null;}
         Document docine =Document.parse(diyObjectIdToJson(obj));
         docine.remove("_id");
@@ -77,11 +84,9 @@ public class MongoSdkBase {
      * 删除找到的第一条记录
      *
      * @param table  表连接
-     * @param filter
      * @return
      */
-    @SuppressWarnings("rawtypes")
-	public static int deleteOne(MongoCollection table, String id) {
+    public  int deleteOne(MongoCollection table, String id) {
         Bson filter = eq("_id", id);
         DeleteResult re = table.deleteOne(filter);
         return (int) re.getDeletedCount();
@@ -91,12 +96,11 @@ public class MongoSdkBase {
      * 根据条件更新单条记录
      *
      * @param table  表连接
-     * @param filter
      * @param obj
      * @return
      */
     @SuppressWarnings("rawtypes")
-	public static boolean updateOne(MongoCollection table, String id, Object obj) {
+    public  boolean updateOne(MongoCollection table, String id, Object obj) {
         Bson filter = eq("_id", id);
         table.updateOne(filter, set(diyObjectIdToJson(obj)));
         return true;
@@ -104,13 +108,10 @@ public class MongoSdkBase {
 
     /**
      * 查询 单条记录 返回json字符串
-     *
-     * @param table  表连接
-     * @param filter
+     * @param table  表
      * @return
      */
-    @SuppressWarnings("rawtypes")
-	public static String seleteOne(MongoCollection table, String id) {
+    public  String seleteOne(MongoCollection table, String id) {
         Bson filter = eq("_id", id);
         return diyObjectIdToJson(seleteOneDocument(table, filter));
     }
@@ -119,11 +120,9 @@ public class MongoSdkBase {
      * 查询 单条记录 返回json字符串
      *
      * @param table  表连接
-     * @param filter
      * @return
      */
-    @SuppressWarnings("rawtypes")
-	public static String seleteOne(MongoCollection table, Bson filter) {
+    public  String seleteOne(MongoCollection table, Bson filter) {
         return diyObjectIdToJson(seleteOneDocument(table, filter));
     }
 
@@ -131,11 +130,9 @@ public class MongoSdkBase {
      * 查询 单条记录 返回 org.bson.Document  对象
      *
      * @param table  表连接
-     * @param filter
      * @return
      */
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-	public static Document seleteOneDocument(MongoCollection table, Bson filter) {
+    public  Document seleteOneDocument(MongoCollection table, Bson filter) {
         FindIterable<Document> result = table.find(filter);
         return result.first();
     }
@@ -148,8 +145,7 @@ public class MongoSdkBase {
      * @param sort   排序    com.mongodb.client.model.Sorts   可空
      * @return
      */
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-	public static List<JSONObject> getAll(MongoCollection table, Bson filter, Bson sort) {
+    public  List<JSONObject> getAll(MongoCollection table, Bson filter, Bson sort) {
         List<JSONObject> list = new ArrayList<JSONObject>();
         FindIterable<Document> result = null;
         if (filter == null) {
@@ -167,8 +163,7 @@ public class MongoSdkBase {
         return list;
     }
 
-    @SuppressWarnings("rawtypes")
-	public static List<JSONObject> getAllbyCid(MongoCollection table, int cid) {
+    public  List<JSONObject> getAllbyCid(MongoCollection table, int cid) {
         return getAll(table, eq("cid", cid), null);
     }
 
@@ -181,8 +176,7 @@ public class MongoSdkBase {
      * @param pageSize
      * @return
      */
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-	public static JSONObject getPage(MongoCollection table, Bson filter, Bson sort, int pageNum, int pageSize) {
+    public  JSONObject getPage(MongoCollection table, Bson filter, Bson sort, int pageNum, int pageSize) {
         int totalCount = (int) (filter == null ? table.count(): table.count(filter));
         int totalPage = (int) (totalCount / pageSize + ((totalCount % pageSize == 0) ? 0 : 1));
         if (pageNum > totalPage){ pageNum = totalPage;}
@@ -216,13 +210,11 @@ public class MongoSdkBase {
      *
      * @param table    表连接
      * @param filter   条件  com.mongodb.client.model.Filter
-     * @param sort     排序    com.mongodb.client.model.Sorts
      * @param pageNum
      * @param pageSize
      * @return
      */
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-	public static JSONObject getGroupPage(MongoCollection table, Bson filter, Bson group, Bson sorts, int pageNum, int pageSize) {
+    public  JSONObject getGroupPage(MongoCollection table, Bson filter, Bson group, Bson sorts, int pageNum, int pageSize) {
         List<JSONObject> list = new ArrayList<>();
         int startRow = pageNum > 0 ? (pageNum - 1) * pageSize : 0;
         MongoCursor<Document> iterator = table.aggregate(Arrays.asList(match(filter), group, sort(sorts), skip(startRow), limit(pageSize))).iterator();
@@ -242,27 +234,46 @@ public class MongoSdkBase {
     }
 
 
-	/**
-	 * 聚哈函数 统计  ,查询
-	 * @param table
-	 * @param filter
-	 * @param group
-	 * @param sort
-	 * @return
-	 */
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public static List<JSONObject> getAggregateList(MongoCollection table,Bson filter,DBObject group,Bson sort){
-		List<JSONObject> list=new ArrayList<JSONObject>();
-		MongoCursor<Document> iterator=table.aggregate(Arrays.asList(match(filter),group,sort(sort))).iterator();  
-		 while (iterator.hasNext()) {
-	            Document doc = iterator.next();
-	            list.add(JSON.parseObject(diyObjectIdToJson(doc)));
-	        }
-		return list;
-	}
+    /**
+     * 聚哈函数 统计  ,查询
+     * @param table
+     * @param filter
+     * @param group
+     * @param sort
+     * @return
+     */
+    public  List<JSONObject> getAggregateList(MongoCollection table, Bson filter, DBObject group, Bson sort){
+        List<JSONObject> list=new ArrayList<JSONObject>();
+        MongoCursor<Document> iterator=table.aggregate(Arrays.asList(match(filter),group,sort(sort))).iterator();
+        while (iterator.hasNext()) {
+            Document doc = iterator.next();
+            list.add(JSON.parseObject(diyObjectIdToJson(doc)));
+        }
+        return list;
+    }
 
 
-  
+    /**
+     * 获取所有数据库名
+     * @return
+     */
+    public  List<String> getDbList() {
+        return mongoClient.getDatabaseNames();
+    }
+
+    /***
+     * 获取表想详细内存占用信息
+     * @return
+     */
+    public  BasicDBObject getStats(String name, String collection){
+        DB db=new DB(mongoClient,name);
+        return db.getCollection(collection).getStats();
+    }
+
+
+    public  MongoDatabase getMongoDb(String databaseName) {
+        return mongoClient.getDatabase(databaseName);
+    }
 
     /**
      * 更新数据 注意 多余字段 会在库表记录追加
@@ -270,7 +281,7 @@ public class MongoSdkBase {
      * @param json
      * @return
      */
-	public static Document set(String json) {
+    public static Document set(String json) {
         Document b =Document.parse(json);
         b.remove("_id");
         return new Document("$set", b);
@@ -290,7 +301,6 @@ public class MongoSdkBase {
 
     /**
      * 出库后查询
-     *
      * @param object
      * @return
      */

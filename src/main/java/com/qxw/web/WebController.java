@@ -1,29 +1,4 @@
 package com.qxw.web;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.URLEncoder;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import org.bson.Document;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Controller;
-import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
-
 import com.alibaba.fastjson.JSONObject;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCollection;
@@ -31,11 +6,26 @@ import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoIterable;
 import com.mongodb.client.model.Sorts;
-import com.qxw.mongodb.MongoFactory;
 import com.qxw.mongodb.MongoSdkBase;
-import com.qxw.utils.CsvUtils;
+import com.qxw.utils.ByteConvKbUtils;
 import com.qxw.utils.JsonFormatTool;
 import com.qxw.utils.Res;
+import org.bson.Document;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Controller;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.*;
 
 /**
  * mongodb web
@@ -50,12 +40,13 @@ public class WebController {
 	private String username;
 	@Value("${login.password}")
 	private String password;
-	
-    /**
-     * 需要过滤的表
-     */
-    private final static String[] TAVLEARR = {"system.indexes"};
 
+	@Autowired
+	private MongoSdkBase mongoSdkBase;
+	/**
+	 * 需要过滤的表
+	 */
+	private final static String[] TAVLEARR = {"system.indexes"};
 
     
     /**
@@ -66,6 +57,7 @@ public class WebController {
     @ResponseBody
     @RequestMapping("/login")
     public Res login(String uname,String pwd,HttpServletRequest request) {
+
     	if(StringUtils.isEmpty(uname)||StringUtils.isEmpty(pwd)){
     		return Res.error("账号密码不能为空");
     	}
@@ -82,13 +74,16 @@ public class WebController {
     }
     /**
      * 数据源列表
-     * @param db
      * @return
      */
     @ResponseBody
     @RequestMapping("/index")
     public Res index() {
-        List<String> listNames =MongoFactory.getDbList();
+        List<String> listNames =mongoSdkBase.getDbList();
+        //系统表过滤
+        listNames.remove("admin");
+        listNames.remove("local");
+        logger.info(listNames.toString());
         return Res.ok().put("listNames", listNames);
     }
 
@@ -100,18 +95,26 @@ public class WebController {
     @ResponseBody
     @RequestMapping("/db")
     public Res db(String dbName) {
+
     	if(StringUtils.isEmpty(dbName)){
     		return Res.error("dbName参数不能为空");
     	}
-        MongoDatabase mogo = MongoFactory.getMongoDb(dbName);
+    	if("undefined".equals(dbName)){
+			return Res.error("请关闭所有的iframe后在执行F5");
+		}
+        MongoDatabase mogo = mongoSdkBase.getMongoDb(dbName);
         //获取所有集合的名称
         MongoIterable<String> collectionNames = mogo.listCollectionNames();
         MongoCursor<String> i = collectionNames.iterator();
-        List<String> listNames = new ArrayList<String>();
+        List<JSONObject> listNames = new ArrayList<JSONObject>();
         while (i.hasNext()) {
             String tableName = i.next();
-			if(!Arrays.asList(TAVLEARR).contains(tableName)){
-	            listNames.add(tableName);
+			if(!Arrays.asList(TAVLEARR).contains(tableName)) {
+				JSONObject t = new JSONObject();
+				t.put("tableName", tableName);
+				BasicDBObject obj = mongoSdkBase.getStats(dbName, tableName);
+				t.put("size", ByteConvKbUtils.getPrintSize(obj.getInt("size")));
+				listNames.add(t);
 			}
 
         }
@@ -133,17 +136,29 @@ public class WebController {
     		return Res.error("dbName,tableName参数不能为空");
     	}
         BasicDBObject query = new BasicDBObject();
+		BasicDBObject group = new BasicDBObject();
         if(!StringUtils.isEmpty(parame)){
         	JSONObject obj=JSONObject.parseObject(parame);
         	 Set<String> kyes=obj.keySet();
         	 kyes.forEach(key->{
-        		    query.put(key,obj.get(key));
+        		 	if(key.equals("$group")){
+						group.put(key,obj.get(key));
+					}else {
+						query.put(key, obj.get(key));
+					}
         	  });
         }
-        MongoCollection<Document> table = MongoSdkBase.getColl(dbName,tableName);
-        JSONObject data = MongoSdkBase.getPage(table, query, Sorts.descending("_id"), pageNum, pageSize);
+
+        MongoCollection<Document> table = mongoSdkBase.getColl(dbName,tableName);
+		JSONObject data=null;
+		if(group.size()==0){
+			data=mongoSdkBase.getPage(table, query, Sorts.descending("_id"), pageNum, pageSize);
+		}else{
+			data=mongoSdkBase.getGroupPage(table,query,group,Sorts.descending("_id"), pageNum, pageSize);
+		}
+
         //获取集合的所有key
-        Document obj = MongoSdkBase.getColl(dbName,tableName).find().first();
+        Document obj = mongoSdkBase.getColl(dbName,tableName).find().first();
         Map<String, Object> m = new HashMap<String, Object>(16);
         m.put("data", data);
         if(obj!=null) {
@@ -154,7 +169,7 @@ public class WebController {
    
     /**
      * 删除集合
-     * @param collectionName
+     * @param dbName
      * @param tableName
      * @param id  主键
      * @return
@@ -165,15 +180,14 @@ public class WebController {
     	if(StringUtils.isEmpty(dbName)||StringUtils.isEmpty(tableName)||StringUtils.isEmpty(id)){
     		return Res.error("dbName,tableName,id,参数不能为空");
     	}
-    	int count=MongoSdkBase.deleteOne(MongoSdkBase.getColl(dbName,tableName),id);
+    	int count=mongoSdkBase.deleteOne(mongoSdkBase.getColl(dbName,tableName),id);
         return count>0?Res.ok():Res.error("删除失败");
     }
 
     /**
      * 更新集合
-     * @param collectionName
      * @param tableName
-     * @param data  json字符串
+     * @param parame  json字符串
      * @return
      */
     @ResponseBody
@@ -184,15 +198,15 @@ public class WebController {
     	}
     	JSONObject info=JSONObject.parseObject(parame);
     	String id=info.getString("_id");
-    	boolean falg=MongoSdkBase.updateOne(MongoSdkBase.getColl(dbName,tableName), id, info);
+    	boolean falg=mongoSdkBase.updateOne(mongoSdkBase.getColl(dbName,tableName), id, info);
         return falg==true?Res.ok():Res.error("更新失败");
     }
     
     /**
      * 添加集合
-     * @param collectionName
+     * @param dbName
      * @param tableName
-     * @param data  json字符串
+     * @param parame  json字符串
      * @return
      */
     @ResponseBody
@@ -202,16 +216,16 @@ public class WebController {
     		return Res.error("dbName,tableName,parame,参数不能为空");
     	}
     	JSONObject info=JSONObject.parseObject(parame);
-    	String id=MongoSdkBase.insertOne(MongoSdkBase.getColl(dbName,tableName), info);
+    	String id=mongoSdkBase.insertOne(mongoSdkBase.getColl(dbName,tableName), info);
         return StringUtils.isEmpty(id)?Res.error("添加失败"):Res.ok();
     }
     
  
     /**
      * 根据ID查询集合
-     * @param collectionName
+     * @param dbName
      * @param tableName
-     * @param data  json字符串
+     * @param id
      * @return
      */
     @ResponseBody
@@ -220,7 +234,7 @@ public class WebController {
     	if(StringUtils.isEmpty(dbName)||StringUtils.isEmpty(tableName)||StringUtils.isEmpty(id)){
     		return Res.error("dbName,tableName,id,参数不能为空");
     	}
-    	String result=MongoSdkBase.seleteOne(MongoSdkBase.getColl(dbName,tableName), id);
+    	String result=mongoSdkBase.seleteOne(mongoSdkBase.getColl(dbName,tableName), id);
     
         return Res.ok().put("data", JSONObject.parseObject(result));
     }
@@ -250,7 +264,7 @@ public class WebController {
 		        		    query.put(key,obj.get(key));
 		        	  });
 		      }
-		    List<JSONObject> list=MongoSdkBase.getAll(MongoSdkBase.getColl(dbName, tableName), query, Sorts.descending("_id"));
+		    List<JSONObject> list=mongoSdkBase.getAll(mongoSdkBase.getColl(dbName, tableName), query, Sorts.descending("_id"));
 		
 			response.setHeader("Content-Disposition", "attachment; filename=\"" + tableName+".json" + "\"");			 
 			// 写出响应
@@ -260,6 +274,7 @@ public class WebController {
 			os.flush();
 			
 		} catch (Exception e) {
+			logger.error("导出异常：tableName:{},{}",tableName,e);
 			e.printStackTrace();
 		}finally{
 			if(os!=null){
@@ -272,5 +287,7 @@ public class WebController {
 		}
 		
 	}
+
+
 
 }

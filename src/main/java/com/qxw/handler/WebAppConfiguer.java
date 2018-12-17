@@ -1,7 +1,9 @@
 package com.qxw.handler;
 import javax.annotation.Resource;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 /**
  * 拦截器注册
@@ -17,5 +19,6 @@ public class WebAppConfiguer implements   WebMvcConfigurer {
 		//需要拦截的方法  excludePathPatterns(不需要拦截的方法)
 		registry.addInterceptor(loginInterceptor).addPathPatterns("/mongo/**").excludePathPatterns("/mongo/login");
     }
-	
+
+
 }
