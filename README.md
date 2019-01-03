@@ -4,12 +4,13 @@
 [![码云](https://img.shields.io/badge/Gitee-%E7%A0%81%E4%BA%91-yellow.svg)](https://gitee.com/qinxuewu)
 [![Github](https://img.shields.io/badge/Github-Github-red.svg)](https://github.com/a870439570)
 
+
 #### 项目介绍
 - Mongodb网页管理工具,基于Spring Boot2.0，前端采用layerUI实现。
 - 源于线上环境部署mongodb时屏蔽了外网访问mongodb,所以使用不了mongochef这样方便的远程连接工具，便Mongodb提供的java api实现的的网页版管理
 - 未设置登录权限相关模块，低耦合性 方便嵌入到现有的项目中
 
-https://gitee.com/qinxuewu/mongo-web-select  码云更新地址
+
 #### 软件架构
 1. springBoot2.0相关组件
 1. mongodb
@@ -89,3 +90,5 @@ $group 后面是分组的条件和分组后指定显示的字段（mongodb分组
 ### 添加 删除，修改(添加，修改后点击右上角刷新按钮)
 ![输入图片说明](https://images.gitee.com/uploads/images/2018/1121/102729_8c3892a1_1478371.png "屏幕截图.png")
 ![输入图片说明](https://images.gitee.com/uploads/images/2018/1121/102746_e486eb86_1478371.png "屏幕截图.png")
+
+
