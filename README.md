@@ -1,5 +1,9 @@
 #  Mongodb-WeAdmin
 
+[![QQ群](https://img.shields.io/badge/QQ%E7%BE%A4-924715723-yellowgreen.svg)](https://jq.qq.com/?_wv=1027&k=5PIRvFq)
+[![码云](https://img.shields.io/badge/Gitee-%E7%A0%81%E4%BA%91-yellow.svg)](https://gitee.com/qinxuewu)
+[![Github](https://img.shields.io/badge/Github-Github-red.svg)](https://github.com/a870439570)
+
 #### 项目介绍
 - Mongodb网页管理工具,基于Spring Boot2.0，前端采用layerUI实现。
 - 源于线上环境部署mongodb时屏蔽了外网访问mongodb,所以使用不了mongochef这样方便的远程连接工具，便Mongodb提供的java api实现的的网页版管理
