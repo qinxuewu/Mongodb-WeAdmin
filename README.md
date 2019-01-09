@@ -28,7 +28,7 @@
 ## 查询指定表的数据
 ![输入图片说明](https://images.gitee.com/uploads/images/2018/1122/153243_d170a1ee_1478371.png "屏幕截图.png")
 
-## 多任务监控管理
+## 表操作
 ![输入图片说明](https://images.gitee.com/uploads/images/2018/1121/102729_8c3892a1_1478371.png "屏幕截图.png")
 ![输入图片说明](https://images.gitee.com/uploads/images/2018/1121/102746_e486eb86_1478371.png "屏幕截图.png")
 
