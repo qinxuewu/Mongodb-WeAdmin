@@ -56,7 +56,7 @@ public class MongoConfig {
             mongoClient = new MongoClient(serverAddress, mongoCredential,option);
 
         }
-        logger.info("*********** mongoClient 偏好为=" + mongoClient.getReadPreference().toString());
+        logger.info("*********** mongoClient 偏好为=「」" + mongoClient.getReadPreference().toString());
         return  mongoClient;
     }
 
