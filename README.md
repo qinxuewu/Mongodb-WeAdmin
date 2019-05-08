@@ -10,9 +10,6 @@
 - 源于线上环境部署mongodb时屏蔽了外网访问mongodb,所以使用不了mongochef这样方便的远程连接工具，便Mongodb提供的java api实现的的网页版管理
 - 未设置登录权限相关模块，低耦合性 方便嵌入到现有的项目
 
-[部署文档](https://a870439570.github.io/work-doc/mongdb)
-- https://a870439570.github.io/work-doc/mongdb
-
 
 ## 关于
 
