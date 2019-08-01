@@ -1,6 +1,6 @@
 { 
     "_id" : "5bf5103320a2b91494dba7b5", 
-    "method" : "com.pflm.controller.api.ApiSurfingShareAction.push()", 
+    "method" : "com.controller.api.ApiSurfingShareAction.push()", 
     "ip" : "113.111.51.76", 
     "time" : "2018-07-06 18:14:59", 
     "params" : [
@@ -11,5 +11,5 @@
             "username" : " 接口账号"
         }
     ], 
-    "operation" : "天翼分享家活动同步接口"
+    "operation" : "同步接口"
 }
